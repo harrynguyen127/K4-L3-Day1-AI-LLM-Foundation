@@ -11,7 +11,9 @@ import os
 from flask import Flask, Response, render_template, request, stream_with_context
 
 from template import (
+    OPENAI_MINI_MODEL,
     OPENAI_MODEL,
+    PRICING_PER_1K_TOKENS,
     batch_compare,
     count_tokens,
     estimate_cost,
@@ -103,6 +105,16 @@ def compare():
         results = batch_compare(prompts)
     except Exception as exc:
         return {"error": str(exc)}, 500
+
+    mini_pricing = PRICING_PER_1K_TOKENS.get(
+        OPENAI_MINI_MODEL, PRICING_PER_1K_TOKENS["gpt-4o-mini"]
+    )
+    for r in results:
+        r["mini_cost_estimate"] = (
+            (len(r["mini_response"].split()) / 0.75)
+            / 1000
+            * mini_pricing["output"]
+        )
 
     return {"results": results}
 

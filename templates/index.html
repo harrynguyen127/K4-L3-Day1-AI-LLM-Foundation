@@ -51,6 +51,10 @@
     height: 100vh;
     max-width: 760px;
     margin: 0 auto;
+    transition: max-width 0.15s ease;
+  }
+  .app.wide {
+    max-width: 1400px;
   }
   .tabs {
     display: flex;
@@ -291,12 +295,13 @@
   table#compareTable {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
-    min-width: 720px;
+    font-size: 13.5px;
+    min-width: 900px;
+    table-layout: fixed;
   }
   table#compareTable th, table#compareTable td {
     text-align: left;
-    padding: 10px 12px;
+    padding: 12px 14px;
     border-bottom: 1px solid var(--border);
     vertical-align: top;
   }
@@ -307,10 +312,13 @@
     white-space: nowrap;
   }
   table#compareTable tr:last-child td { border-bottom: none; }
+  table#compareTable tr.group-end td { border-bottom: 2px solid var(--border); }
+  table#compareTable tr:last-child.group-end td { border-bottom: none; }
   table#compareTable td.cell-text {
-    max-width: 260px;
     white-space: pre-wrap;
     word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.55;
   }
   table#compareTable td.cell-num { white-space: nowrap; color: var(--text-dim); }
 </style>
@@ -364,14 +372,20 @@
     </div>
     <div class="table-wrap" id="compareTableWrap" hidden>
       <table id="compareTable">
+        <colgroup>
+          <col style="width: 18%;">
+          <col style="width: 9%;">
+          <col style="width: 58%;">
+          <col style="width: 8%;">
+          <col style="width: 7%;">
+        </colgroup>
         <thead>
           <tr>
             <th>Prompt</th>
-            <th>GPT-4o</th>
-            <th>GPT-4o-mini</th>
-            <th>Độ trễ 4o (s)</th>
-            <th>Độ trễ mini (s)</th>
-            <th>Chi phí 4o ($)</th>
+            <th>Model</th>
+            <th>Phản hồi</th>
+            <th>Độ trễ (s)</th>
+            <th>Chi phí ($)</th>
           </tr>
         </thead>
         <tbody id="compareTableBody"></tbody>
@@ -392,6 +406,7 @@ const statTurns = document.getElementById('statTurns');
 const statTokens = document.getElementById('statTokens');
 const statCost = document.getElementById('statCost');
 
+const appEl = document.querySelector('.app');
 const tabChatBtn = document.getElementById('tabChatBtn');
 const tabCompareBtn = document.getElementById('tabCompareBtn');
 const chatView = document.getElementById('chatView');
@@ -412,6 +427,7 @@ function switchTab(name) {
   compareView.hidden = isChat;
   tabChatBtn.classList.toggle('active', isChat);
   tabCompareBtn.classList.toggle('active', !isChat);
+  appEl.classList.toggle('wide', !isChat);
 }
 
 compareBtn.addEventListener('click', runCompare);
@@ -460,27 +476,38 @@ async function runCompare() {
   }
 }
 
+function addCompareRow(prompt, model, response, latency, cost, isGroupEnd) {
+  const tr = document.createElement('tr');
+  if (isGroupEnd) tr.className = 'group-end';
+
+  if (prompt !== null) {
+    const promptTd = document.createElement('td');
+    promptTd.className = 'cell-text';
+    promptTd.rowSpan = 2;
+    promptTd.textContent = prompt;
+    tr.appendChild(promptTd);
+  }
+
+  const cells = [
+    { text: model, cls: 'cell-num' },
+    { text: response, cls: 'cell-text' },
+    { text: (latency ?? 0).toFixed(2), cls: 'cell-num' },
+    { text: '$' + (cost ?? 0).toFixed(4), cls: 'cell-num' },
+  ];
+  for (const c of cells) {
+    const td = document.createElement('td');
+    td.className = c.cls;
+    td.textContent = c.text;
+    tr.appendChild(td);
+  }
+  compareTableBody.appendChild(tr);
+}
+
 function renderCompareTable(results) {
   compareTableBody.innerHTML = '';
   for (const r of results) {
-    const tr = document.createElement('tr');
-
-    const cells = [
-      { text: r.prompt, cls: 'cell-text' },
-      { text: r.gpt4o_response, cls: 'cell-text' },
-      { text: r.mini_response, cls: 'cell-text' },
-      { text: (r.gpt4o_latency ?? 0).toFixed(2), cls: 'cell-num' },
-      { text: (r.mini_latency ?? 0).toFixed(2), cls: 'cell-num' },
-      { text: '$' + (r.gpt4o_cost_estimate ?? 0).toFixed(4), cls: 'cell-num' },
-    ];
-
-    for (const c of cells) {
-      const td = document.createElement('td');
-      td.className = c.cls;
-      td.textContent = c.text;
-      tr.appendChild(td);
-    }
-    compareTableBody.appendChild(tr);
+    addCompareRow(r.prompt, 'GPT-4o', r.gpt4o_response, r.gpt4o_latency, r.gpt4o_cost_estimate, false);
+    addCompareRow(null, 'GPT-4o-mini', r.mini_response, r.mini_latency, r.mini_cost_estimate, true);
   }
   compareTableWrap.hidden = results.length === 0;
 }
