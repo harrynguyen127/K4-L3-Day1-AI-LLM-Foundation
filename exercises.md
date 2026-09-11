@@ -74,13 +74,13 @@ với delay cố định giống nhau?**
 **Bạn chọn persona gì cho trợ lý của mình? Viết lại system prompt đó và giải
 thích 1–2 lựa chọn từ ngữ quan trọng trong prompt (ví dụ: vì sao yêu cầu
 "trả lời ngắn gọn", vì sao chỉ định ngôn ngữ...):**
-> *Câu trả lời của bạn*
+> Tôi chọn persona là một thư ký giám đốc, luôn trả lời ngắn gọn, rõ ràng và bằng tiếng Việt. Lý do tôi yêu cầu "trả lời ngắn gọn" là để người dùng nhận được thông tin nhanh chóng mà không bị loãng bởi các chi tiết không cần thiết. Việc chỉ định ngôn ngữ là tiếng Việt giúp đảm bảo trợ lý luôn sử dụng ngôn ngữ phù hợp với người dùng.
 
 ### Câu 4.2 — Hạn chế & cải thiện
 **Trợ lý của bạn hiện có hạn chế lớn nhất là gì (ví dụ: history chỉ 3 lượt,
 không có bộ nhớ dài hạn, không kiểm duyệt nội dung...)? Đề xuất một cải
 thiện cụ thể và mô tả ngắn cách triển khai:**
-> *Câu trả lời của bạn*
+> Hạn chế lớn nhất của trợ lý hiện tại là chưa có bộ nhớ dài hạn, nên không thể ghi nhớ thông tin từ các phiên chat trước. Một cải thiện cụ thể là triển khai một cơ chế lưu trữ và truy xuất thông tin người dùng từ các phiên trước, ví dụ sử dụng cơ sở dữ liệu hoặc file lưu trữ, và cập nhật lịch sử chat khi cần thiết.
 
 ---
 
