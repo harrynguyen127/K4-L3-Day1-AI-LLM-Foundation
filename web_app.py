@@ -21,6 +21,7 @@ from template import (
 )
 
 MAX_COMPARE_PROMPTS = 10
+AVAILABLE_MODELS = [OPENAI_MODEL, OPENAI_MINI_MODEL]
 
 app = Flask(__name__)
 
@@ -35,7 +36,12 @@ DEFAULT_PERSONA = (
 
 @app.route("/")
 def index():
-    return render_template("index.html", default_persona=DEFAULT_PERSONA)
+    return render_template(
+        "index.html",
+        default_persona=DEFAULT_PERSONA,
+        available_models=AVAILABLE_MODELS,
+        default_model=OPENAI_MODEL,
+    )
 
 
 @app.route("/api/chat", methods=["POST"])
@@ -44,6 +50,9 @@ def chat():
     persona = (data.get("persona") or DEFAULT_PERSONA).strip()
     message = (data.get("message") or "").strip()
     history = data.get("history") or []
+    model = data.get("model") or OPENAI_MODEL
+    if model not in AVAILABLE_MODELS:
+        model = OPENAI_MODEL
 
     if not message:
         return {"error": "Thiếu nội dung tin nhắn."}, 400
@@ -62,7 +71,7 @@ def chat():
             )
             stream = retry_with_backoff(
                 lambda: client.chat.completions.create(
-                    model=OPENAI_MODEL,
+                    model=model,
                     messages=messages,
                     stream=True,
                 )
@@ -76,7 +85,7 @@ def chat():
                     yield delta
 
             reply = "".join(reply_parts)
-            cost = estimate_cost(message, reply, OPENAI_MODEL)
+            cost = estimate_cost(message, reply, model)
             stats = {
                 "reply": reply,
                 "input_tokens": cost["input_tokens"],

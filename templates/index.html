@@ -120,6 +120,22 @@
     cursor: pointer;
   }
   .persona-toggle:hover { color: var(--text); border-color: var(--accent); }
+  .model-select {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text-dim);
+    font-size: 13px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .model-select:hover { color: var(--text); border-color: var(--accent); }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
   .persona-panel {
     margin-top: 12px;
     display: none;
@@ -331,7 +347,14 @@
         <span class="dot"></span>
         <h1>Trợ Lý AI</h1>
       </div>
-      <button class="persona-toggle" id="personaToggle" type="button">Persona ▾</button>
+      <div class="header-actions">
+        <select class="model-select" id="modelSelect">
+          {% for m in available_models %}
+          <option value="{{ m }}" {% if m == default_model %}selected{% endif %}>{{ m }}</option>
+          {% endfor %}
+        </select>
+        <button class="persona-toggle" id="personaToggle" type="button">Persona ▾</button>
+      </div>
     </div>
     <div class="persona-panel" id="personaPanel">
       <textarea id="persona">{{ default_persona }}</textarea>
@@ -400,6 +423,7 @@ const emptyState = document.getElementById('emptyState');
 const messageEl = document.getElementById('message');
 const sendBtn = document.getElementById('send');
 const personaEl = document.getElementById('persona');
+const modelSelectEl = document.getElementById('modelSelect');
 const personaToggle = document.getElementById('personaToggle');
 const personaPanel = document.getElementById('personaPanel');
 const statTurns = document.getElementById('statTurns');
@@ -581,6 +605,7 @@ async function send() {
         persona: personaEl.value.trim(),
         message: text,
         history: history,
+        model: modelSelectEl.value,
       }),
     });
 
