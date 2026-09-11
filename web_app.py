@@ -10,7 +10,15 @@ import os
 
 from flask import Flask, Response, render_template, request, stream_with_context
 
-from template import OPENAI_MODEL, count_tokens, estimate_cost, retry_with_backoff
+from template import (
+    OPENAI_MODEL,
+    batch_compare,
+    count_tokens,
+    estimate_cost,
+    retry_with_backoff,
+)
+
+MAX_COMPARE_PROMPTS = 10
 
 app = Flask(__name__)
 
@@ -78,6 +86,25 @@ def chat():
             yield ERROR_MARKER + str(exc)
 
     return Response(stream_with_context(generate()), mimetype="text/plain")
+
+
+@app.route("/api/compare", methods=["POST"])
+def compare():
+    data = request.get_json(force=True) or {}
+    raw_prompts = data.get("prompts") or []
+    prompts = [p.strip() for p in raw_prompts if isinstance(p, str) and p.strip()]
+
+    if not prompts:
+        return {"error": "Cần ít nhất 1 prompt."}, 400
+    if len(prompts) > MAX_COMPARE_PROMPTS:
+        return {"error": f"Chỉ so sánh tối đa {MAX_COMPARE_PROMPTS} prompt/lần."}, 400
+
+    try:
+        results = batch_compare(prompts)
+    except Exception as exc:
+        return {"error": str(exc)}, 500
+
+    return {"results": results}
 
 
 if __name__ == "__main__":

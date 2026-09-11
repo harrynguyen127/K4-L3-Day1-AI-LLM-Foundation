@@ -105,7 +105,6 @@ def call_openai_mini(
     Gợi ý:
         Tái sử dụng call_openai() với model=OPENAI_MINI_MODEL — 1 dòng code.
     """
-    # TODO: gọi call_openai với model=OPENAI_MINI_MODEL
     return call_openai(
         prompt=prompt,
         model=OPENAI_MINI_MODEL,

@@ -52,6 +52,33 @@
     max-width: 760px;
     margin: 0 auto;
   }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-top: 12px;
+  }
+  .tab-btn {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .tab-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  [hidden] { display: none !important; }
+  .view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
   header {
     padding: 14px 18px;
     border-bottom: 1px solid var(--border);
@@ -212,6 +239,80 @@
   }
   button#send:disabled { opacity: 0.5; cursor: default; }
   button#send:not(:disabled):hover { filter: brightness(1.08); }
+
+  #compareView { padding: 18px; overflow-y: auto; gap: 14px; }
+  .compare-form label {
+    display: block;
+    font-size: 12.5px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  textarea#prompts {
+    width: 100%;
+    min-height: 90px;
+    resize: vertical;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    background: var(--panel);
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+  }
+  textarea#prompts:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .compare-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  button#compareBtn {
+    align-self: flex-start;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 10px;
+    padding: 9px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button#compareBtn:disabled { opacity: 0.5; cursor: default; }
+  button#compareBtn:not(:disabled):hover { filter: brightness(1.08); }
+  .compare-status {
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .compare-status.error { color: var(--danger); }
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  table#compareTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 720px;
+  }
+  table#compareTable th, table#compareTable td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  table#compareTable th {
+    color: var(--text-dim);
+    font-weight: 600;
+    background: var(--accent-dim);
+    white-space: nowrap;
+  }
+  table#compareTable tr:last-child td { border-bottom: none; }
+  table#compareTable td.cell-text {
+    max-width: 260px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  table#compareTable td.cell-num { white-space: nowrap; color: var(--text-dim); }
 </style>
 </head>
 <body>
@@ -228,23 +329,55 @@
       <textarea id="persona">{{ default_persona }}</textarea>
       <p class="hint">System prompt định hình vai trò của trợ lý. Đổi persona sẽ áp dụng cho tin nhắn tiếp theo.</p>
     </div>
+    <div class="tabs">
+      <button class="tab-btn active" id="tabChatBtn" type="button">Trò chuyện</button>
+      <button class="tab-btn" id="tabCompareBtn" type="button">So sánh Model</button>
+    </div>
   </header>
 
-  <main id="chat">
-    <div class="empty-state" id="emptyState">Bắt đầu trò chuyện với trợ lý của bạn.</div>
-  </main>
+  <section class="view" id="chatView">
+    <main id="chat">
+      <div class="empty-state" id="emptyState">Bắt đầu trò chuyện với trợ lý của bạn.</div>
+    </main>
 
-  <footer>
-    <div class="stats">
-      <span>Lượt: <b id="statTurns">0</b></span>
-      <span>Token: <b id="statTokens">0</b></span>
-      <span>Chi phí ước tính: <b id="statCost">$0.0000</b></span>
+    <footer>
+      <div class="stats">
+        <span>Lượt: <b id="statTurns">0</b></span>
+        <span>Token: <b id="statTokens">0</b></span>
+        <span>Chi phí ước tính: <b id="statCost">$0.0000</b></span>
+      </div>
+      <div class="input-row">
+        <textarea id="message" rows="1" placeholder="Nhập tin nhắn... (Enter để gửi, Shift+Enter xuống dòng)"></textarea>
+        <button id="send" type="button">Gửi</button>
+      </div>
+    </footer>
+  </section>
+
+  <section class="view" id="compareView" hidden>
+    <div class="compare-form">
+      <label for="prompts">Nhập prompt (mỗi dòng 1 prompt, tối đa 10 dòng)</label>
+      <textarea id="prompts" placeholder="Giải thích blockchain là gì?&#10;Viết 1 câu slogan cho quán cà phê&#10;..."></textarea>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button id="compareBtn" type="button">So sánh</button>
+        <span class="compare-status" id="compareStatus"></span>
+      </div>
     </div>
-    <div class="input-row">
-      <textarea id="message" rows="1" placeholder="Nhập tin nhắn... (Enter để gửi, Shift+Enter xuống dòng)"></textarea>
-      <button id="send" type="button">Gửi</button>
+    <div class="table-wrap" id="compareTableWrap" hidden>
+      <table id="compareTable">
+        <thead>
+          <tr>
+            <th>Prompt</th>
+            <th>GPT-4o</th>
+            <th>GPT-4o-mini</th>
+            <th>Độ trễ 4o (s)</th>
+            <th>Độ trễ mini (s)</th>
+            <th>Chi phí 4o ($)</th>
+          </tr>
+        </thead>
+        <tbody id="compareTableBody"></tbody>
+      </table>
     </div>
-  </footer>
+  </section>
 </div>
 
 <script>
@@ -258,6 +391,99 @@ const personaPanel = document.getElementById('personaPanel');
 const statTurns = document.getElementById('statTurns');
 const statTokens = document.getElementById('statTokens');
 const statCost = document.getElementById('statCost');
+
+const tabChatBtn = document.getElementById('tabChatBtn');
+const tabCompareBtn = document.getElementById('tabCompareBtn');
+const chatView = document.getElementById('chatView');
+const compareView = document.getElementById('compareView');
+const promptsEl = document.getElementById('prompts');
+const compareBtn = document.getElementById('compareBtn');
+const compareStatus = document.getElementById('compareStatus');
+const compareTableWrap = document.getElementById('compareTableWrap');
+const compareTableBody = document.getElementById('compareTableBody');
+const MAX_COMPARE_PROMPTS = 10;
+
+tabChatBtn.addEventListener('click', () => switchTab('chat'));
+tabCompareBtn.addEventListener('click', () => switchTab('compare'));
+
+function switchTab(name) {
+  const isChat = name === 'chat';
+  chatView.hidden = !isChat;
+  compareView.hidden = isChat;
+  tabChatBtn.classList.toggle('active', isChat);
+  tabCompareBtn.classList.toggle('active', !isChat);
+}
+
+compareBtn.addEventListener('click', runCompare);
+
+async function runCompare() {
+  const prompts = promptsEl.value
+    .split('\n')
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+
+  if (prompts.length === 0) {
+    compareStatus.textContent = 'Nhập ít nhất 1 prompt.';
+    compareStatus.classList.add('error');
+    return;
+  }
+  if (prompts.length > MAX_COMPARE_PROMPTS) {
+    compareStatus.textContent = `Chỉ so sánh tối đa ${MAX_COMPARE_PROMPTS} prompt/lần.`;
+    compareStatus.classList.add('error');
+    return;
+  }
+
+  compareBtn.disabled = true;
+  compareStatus.classList.remove('error');
+  compareStatus.textContent = `Đang so sánh ${prompts.length} prompt... có thể mất một lúc.`;
+  compareTableWrap.hidden = true;
+
+  try {
+    const res = await fetch('/api/compare', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompts }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+
+    renderCompareTable(data.results || []);
+    compareStatus.textContent = `Xong — ${data.results.length} prompt đã so sánh.`;
+  } catch (err) {
+    compareStatus.textContent = 'Lỗi: ' + err.message;
+    compareStatus.classList.add('error');
+  } finally {
+    compareBtn.disabled = false;
+  }
+}
+
+function renderCompareTable(results) {
+  compareTableBody.innerHTML = '';
+  for (const r of results) {
+    const tr = document.createElement('tr');
+
+    const cells = [
+      { text: r.prompt, cls: 'cell-text' },
+      { text: r.gpt4o_response, cls: 'cell-text' },
+      { text: r.mini_response, cls: 'cell-text' },
+      { text: (r.gpt4o_latency ?? 0).toFixed(2), cls: 'cell-num' },
+      { text: (r.mini_latency ?? 0).toFixed(2), cls: 'cell-num' },
+      { text: '$' + (r.gpt4o_cost_estimate ?? 0).toFixed(4), cls: 'cell-num' },
+    ];
+
+    for (const c of cells) {
+      const td = document.createElement('td');
+      td.className = c.cls;
+      td.textContent = c.text;
+      tr.appendChild(td);
+    }
+    compareTableBody.appendChild(tr);
+  }
+  compareTableWrap.hidden = results.length === 0;
+}
 
 const STATS_MARKER = '\x00STATS\x00';
 const ERROR_MARKER = '\x00ERROR\x00';
