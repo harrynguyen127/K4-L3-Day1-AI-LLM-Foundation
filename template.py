@@ -73,7 +73,7 @@ def call_openai(
 
     client = OpenAI(
         api_key=os.getenv("GEMINI_API_KEY"),
-        base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+        base_url=os.getenv("OPENAI_BASE_URL"),
     )
     start = time.perf_counter()
     response = client.chat.completions.create(
@@ -301,8 +301,38 @@ def streaming_chatbot() -> None:
         - Sau mỗi lượt, thêm phản hồi assistant vào history.
         - Cắt history còn 3 lượt cuối (6 message): history = history[-6:]
     """
-    # TODO: vòng lặp while, đọc input, stream phản hồi, duy trì history
-    raise NotImplementedError("Implement streaming_chatbot")
+    from openai import OpenAI
+
+    client = OpenAI(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        base_url=os.getenv("OPENAI_BASE_URL"),
+    )
+    history = []
+
+    while True:
+        user_msg = input("Bạn: ")
+        if user_msg.strip().lower() in ("quit", "exit"):
+            break
+
+        stream = client.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=history + [{"role": "user", "content": user_msg}],
+            stream=True,
+        )
+        reply_parts = []
+        for chunk in stream:
+            delta = chunk.choices[0].delta.content or ""
+            reply_parts.append(delta)
+            print(delta, end="", flush=True)
+        print()
+
+        history.extend(
+            (
+                {"role": "user", "content": user_msg},
+                {"role": "assistant", "content": "".join(reply_parts)},
+            )
+        )
+        history = history[-6:]
 
 
 # ---------------------------------------------------------------------------
@@ -328,8 +358,13 @@ def retry_with_backoff(
     Raises:
         Exception cuối cùng của fn() sau khi hết số lần thử.
     """
-    # TODO: vòng lặp retry với exponential backoff
-    raise NotImplementedError("Implement retry_with_backoff")
+    for attempt in range(max_retries + 1):
+        try:
+            return fn()
+        except Exception:
+            if attempt == max_retries:
+                raise
+            time.sleep(base_delay * (2**attempt))
 
 
 # ===========================================================================

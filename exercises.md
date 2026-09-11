@@ -58,13 +58,13 @@ nhiều token hơn tiếng Anh cùng độ dài?**
 ### Câu 3.1 — Trải nghiệm người dùng với streaming
 **Streaming quan trọng nhất trong trường hợp nào, và khi nào thì
 non-streaming lại phù hợp hơn?** (1 đoạn văn)
-> *Câu trả lời của bạn*
+> Streaming quan trọng nhất khi người dùng cần phản hồi gần như tức thì, ví dụ trong chat trực tiếp hoặc ứng dụng tương tác thời gian thực. Non-streaming phù hợp hơn khi độ trễ không phải vấn đề lớn, và muốn xử lý toàn bộ phản hồi cùng lúc, ví dụ khi sinh văn bản dài hoặc batch processing.
 
 ### Câu 3.2 — Vì sao backoff theo cấp số nhân?
 **So với delay cố định (ví dụ luôn chờ 1 giây), exponential backoff có lợi
 thế gì khi API bị quá tải? Điều gì xảy ra nếu hàng nghìn client cùng retry
 với delay cố định giống nhau?**
-> *Câu trả lời của bạn*
+> Exponential backoff giúp giảm tải cho API bằng cách tăng dần thời gian chờ giữa các lần retry, tránh tình trạng "thundering herd" khi nhiều client cùng retry đồng thời. Nếu tất cả client đều retry với delay cố định giống nhau, API sẽ tiếp tục bị quá tải và nhiều request sẽ thất bại, dẫn đến hiệu suất tổng thể kém hơn.
 
 ---
 
