@@ -422,8 +422,67 @@ def run_assistant(
         return {"num_turns": num_turns, "total_tokens": total_tokens,
                 "total_cost": total_cost, "history": history}
     """
-    # TODO: triển khai theo khung sườn trong docstring
-    raise NotImplementedError("Implement run_assistant")
+    from openai import OpenAI
+
+    if get_input is None:
+        get_input = input
+
+    client = OpenAI(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        base_url=os.getenv("OPENAI_BASE_URL"),
+    )
+    history = []
+    num_turns = 0
+    total_tokens = 0
+    total_cost = 0.0
+
+    while True:
+        if max_turns is not None and num_turns >= max_turns:
+            break
+
+        user_msg = get_input()
+        if user_msg.strip().lower() in ("quit", "exit"):
+            break
+
+        messages = (
+            [{"role": "system", "content": persona}]
+            + history
+            + [{"role": "user", "content": user_msg}]
+        )
+        stream = retry_with_backoff(
+            lambda: client.chat.completions.create(
+                model=OPENAI_MODEL,
+                messages=messages,
+                stream=True,
+            )
+        )
+
+        reply_parts = []
+        for chunk in stream:
+            delta = chunk.choices[0].delta.content or ""
+            reply_parts.append(delta)
+            print(delta, end="", flush=True)
+        print()
+
+        reply = "".join(reply_parts)
+        history.extend(
+            (
+                {"role": "user", "content": user_msg},
+                {"role": "assistant", "content": reply},
+            )
+        )
+        history = history[-6:]
+
+        num_turns += 1
+        total_tokens += count_tokens(user_msg) + count_tokens(reply)
+        total_cost += estimate_cost(user_msg, reply)["total_cost"]
+
+    return {
+        "num_turns": num_turns,
+        "total_tokens": total_tokens,
+        "total_cost": total_cost,
+        "history": history,
+    }
 
 
 # ===========================================================================
@@ -437,8 +496,12 @@ def batch_compare(prompts: list[str]) -> list[dict]:
         List các dict — mỗi dict là kết quả compare_models kèm thêm
         key "prompt" chứa prompt gốc.
     """
-    # TODO (bonus): lặp qua prompts, gọi compare_models, thêm key "prompt"
-    raise NotImplementedError("Implement batch_compare")
+    results = []
+    for prompt in prompts:
+        comparison = compare_models(prompt)
+        comparison["prompt"] = prompt
+        results.append(comparison)
+    return results
 
 
 def format_comparison_table(results: list[dict]) -> str:
@@ -448,8 +511,25 @@ def format_comparison_table(results: list[dict]) -> str:
     Cột: Prompt | GPT-4o Response | Mini Response | GPT-4o Latency | Mini Latency
     Gợi ý: cắt text dài còn 40 ký tự cho dễ nhìn.
     """
-    # TODO (bonus): dựng chuỗi bảng và trả về
-    raise NotImplementedError("Implement format_comparison_table")
+    def shorten(value: object) -> str:
+        text = str(value).replace("\n", " ").replace("|", "\\|")
+        return text if len(text) <= 40 else f"{text[:37]}..."
+
+    rows = [
+        "| Prompt | GPT-4o Response | Mini Response | GPT-4o Latency | Mini Latency |",
+        "|---|---|---|---:|---:|",
+    ]
+    rows.extend(
+        "| {} | {} | {} | {:.3f}s | {:.3f}s |".format(
+            shorten(result["prompt"]),
+            shorten(result["gpt4o_response"]),
+            shorten(result["mini_response"]),
+            result["gpt4o_latency"],
+            result["mini_latency"],
+        )
+        for result in results
+    )
+    return "\n".join(rows)
 
 
 # ---------------------------------------------------------------------------
@@ -465,10 +545,14 @@ if __name__ == "__main__":
 
     print("\n=== Trợ lý CLI (gõ 'quit' để thoát) ===")
     stats = run_assistant(
-        persona="Bạn là trợ giảng thân thiện của khóa AI, "
-                "trả lời ngắn gọn bằng tiếng Việt.",
+        persona="Bạn là thư ký chuyên nghiệp của giám đốc, hỗ trợ quản lý "
+                "lịch trình, công việc và trao đổi bằng tiếng Việt.",
     )
     print("\n--- Thống kê phiên chat ---")
     for key, value in stats.items():
         if key != "history":
             print(f"{key}: {value}")
+        else:
+            print("history:")
+            for turn in value:
+                print(f"  {turn['role']}: {turn['content']}")
