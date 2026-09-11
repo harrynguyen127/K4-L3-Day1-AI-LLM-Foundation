@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trợ Lý AI</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f5f6f8;
+    --panel: #ffffff;
+    --border: #e4e6eb;
+    --text: #1c1e21;
+    --text-dim: #65676b;
+    --accent: #4f46e5;
+    --accent-dim: #eef0ff;
+    --bubble-user: #4f46e5;
+    --bubble-user-text: #ffffff;
+    --bubble-assistant: #f0f1f4;
+    --bubble-assistant-text: #1c1e21;
+    --danger: #dc2626;
+    --radius: 16px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115;
+      --panel: #171a21;
+      --border: #2a2d36;
+      --text: #e8e9ec;
+      --text-dim: #9a9da6;
+      --accent: #818cf8;
+      --accent-dim: #23253a;
+      --bubble-user: #4f46e5;
+      --bubble-user-text: #ffffff;
+      --bubble-assistant: #23262f;
+      --bubble-assistant-text: #e8e9ec;
+      --danger: #f87171;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .title .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .title h1 {
+    font-size: 16px;
+    margin: 0;
+    font-weight: 600;
+  }
+  .persona-toggle {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 13px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .persona-toggle:hover { color: var(--text); border-color: var(--accent); }
+  .persona-panel {
+    margin-top: 12px;
+    display: none;
+  }
+  .persona-panel.open { display: block; }
+  .persona-panel textarea {
+    width: 100%;
+    min-height: 60px;
+    resize: vertical;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 10px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+  }
+  .persona-panel .hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin: 6px 2px 0;
+  }
+  main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .empty-state {
+    margin: auto;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 14px;
+    max-width: 320px;
+  }
+  .row {
+    display: flex;
+    gap: 8px;
+  }
+  .row.user { justify-content: flex-end; }
+  .row.assistant { justify-content: flex-start; }
+  .bubble {
+    max-width: 78%;
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    font-size: 14.5px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .row.user .bubble {
+    background: var(--bubble-user);
+    color: var(--bubble-user-text);
+    border-bottom-right-radius: 4px;
+  }
+  .row.assistant .bubble {
+    background: var(--bubble-assistant);
+    color: var(--bubble-assistant-text);
+    border-bottom-left-radius: 4px;
+  }
+  .row.assistant .bubble.error {
+    background: transparent;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+  }
+  .cursor {
+    display: inline-block;
+    width: 2px;
+    height: 14px;
+    background: currentColor;
+    margin-left: 2px;
+    vertical-align: -2px;
+    animation: blink 1s step-start infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  footer {
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+    padding: 12px 18px 16px;
+  }
+  .stats {
+    display: flex;
+    gap: 16px;
+    font-size: 11.5px;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .stats span b { color: var(--text); font-weight: 600; }
+  .input-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  textarea#message {
+    flex: 1;
+    resize: none;
+    max-height: 140px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 10px 14px;
+    font-size: 14.5px;
+    font-family: inherit;
+    background: var(--bg);
+    color: var(--text);
+  }
+  textarea#message:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  button#send {
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 14px;
+    padding: 0 18px;
+    height: 42px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  button#send:disabled { opacity: 0.5; cursor: default; }
+  button#send:not(:disabled):hover { filter: brightness(1.08); }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="header-top">
+      <div class="title">
+        <span class="dot"></span>
+        <h1>Trợ Lý AI</h1>
+      </div>
+      <button class="persona-toggle" id="personaToggle" type="button">Persona ▾</button>
+    </div>
+    <div class="persona-panel" id="personaPanel">
+      <textarea id="persona">{{ default_persona }}</textarea>
+      <p class="hint">System prompt định hình vai trò của trợ lý. Đổi persona sẽ áp dụng cho tin nhắn tiếp theo.</p>
+    </div>
+  </header>
+
+  <main id="chat">
+    <div class="empty-state" id="emptyState">Bắt đầu trò chuyện với trợ lý của bạn.</div>
+  </main>
+
+  <footer>
+    <div class="stats">
+      <span>Lượt: <b id="statTurns">0</b></span>
+      <span>Token: <b id="statTokens">0</b></span>
+      <span>Chi phí ước tính: <b id="statCost">$0.0000</b></span>
+    </div>
+    <div class="input-row">
+      <textarea id="message" rows="1" placeholder="Nhập tin nhắn... (Enter để gửi, Shift+Enter xuống dòng)"></textarea>
+      <button id="send" type="button">Gửi</button>
+    </div>
+  </footer>
+</div>
+
+<script>
+const chatEl = document.getElementById('chat');
+const emptyState = document.getElementById('emptyState');
+const messageEl = document.getElementById('message');
+const sendBtn = document.getElementById('send');
+const personaEl = document.getElementById('persona');
+const personaToggle = document.getElementById('personaToggle');
+const personaPanel = document.getElementById('personaPanel');
+const statTurns = document.getElementById('statTurns');
+const statTokens = document.getElementById('statTokens');
+const statCost = document.getElementById('statCost');
+
+const STATS_MARKER = '\x00STATS\x00';
+const ERROR_MARKER = '\x00ERROR\x00';
+
+let history = [];
+let turns = 0;
+let totalTokens = 0;
+let totalCost = 0;
+let busy = false;
+
+personaToggle.addEventListener('click', () => {
+  personaPanel.classList.toggle('open');
+});
+
+messageEl.addEventListener('input', () => {
+  messageEl.style.height = 'auto';
+  messageEl.style.height = Math.min(messageEl.scrollHeight, 140) + 'px';
+});
+
+messageEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    send();
+  }
+});
+
+sendBtn.addEventListener('click', send);
+
+function addRow(role, text) {
+  emptyState.remove();
+  const row = document.createElement('div');
+  row.className = 'row ' + role;
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.textContent = text;
+  row.appendChild(bubble);
+  chatEl.appendChild(row);
+  chatEl.scrollTop = chatEl.scrollHeight;
+  return bubble;
+}
+
+function fmtCost(v) {
+  return '$' + v.toFixed(4);
+}
+
+async function send() {
+  const text = messageEl.value.trim();
+  if (!text || busy) return;
+
+  busy = true;
+  sendBtn.disabled = true;
+  messageEl.value = '';
+  messageEl.style.height = 'auto';
+
+  addRow('user', text);
+  const assistantBubble = addRow('assistant', '');
+  const cursor = document.createElement('span');
+  cursor.className = 'cursor';
+  assistantBubble.appendChild(cursor);
+
+  let replyText = '';
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        persona: personaEl.value.trim(),
+        message: text,
+        history: history,
+      }),
+    });
+
+    if (!res.ok || !res.body) {
+      throw new Error('Không kết nối được máy chủ (HTTP ' + res.status + ')');
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let sawMarker = false;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const statsIdx = buffer.indexOf(STATS_MARKER);
+      const errorIdx = buffer.indexOf(ERROR_MARKER);
+
+      if (errorIdx !== -1) {
+        sawMarker = true;
+        replyText += buffer.slice(0, errorIdx);
+        const errMsg = buffer.slice(errorIdx + ERROR_MARKER.length);
+        assistantBubble.textContent = replyText || 'Đã có lỗi xảy ra.';
+        assistantBubble.classList.add('error');
+        const note = document.createElement('div');
+        note.style.marginTop = '4px';
+        note.style.fontSize = '12px';
+        note.textContent = errMsg;
+        assistantBubble.appendChild(note);
+        break;
+      }
+
+      if (statsIdx !== -1) {
+        sawMarker = true;
+        replyText += buffer.slice(0, statsIdx);
+        assistantBubble.textContent = replyText;
+        const statsJson = buffer.slice(statsIdx + STATS_MARKER.length);
+        try {
+          const stats = JSON.parse(statsJson);
+          turns += 1;
+          totalTokens += (stats.input_tokens || 0) + (stats.output_tokens || 0);
+          totalCost += stats.total_cost || 0;
+          statTurns.textContent = turns;
+          statTokens.textContent = totalTokens;
+          statCost.textContent = fmtCost(totalCost);
+        } catch (e) { /* ignore malformed stats */ }
+        break;
+      }
+
+      replyText += buffer;
+      buffer = '';
+      assistantBubble.textContent = replyText;
+      assistantBubble.appendChild(cursor);
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    if (!sawMarker) {
+      assistantBubble.textContent = replyText;
+    }
+
+    if (replyText) {
+      history.push({ role: 'user', content: text });
+      history.push({ role: 'assistant', content: replyText });
+      history = history.slice(-6);
+    }
+  } catch (err) {
+    assistantBubble.textContent = 'Lỗi kết nối: ' + err.message;
+    assistantBubble.classList.add('error');
+  } finally {
+    cursor.remove();
+    busy = false;
+    sendBtn.disabled = false;
+    messageEl.focus();
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
+}
+</script>
+</body>
+</html>
